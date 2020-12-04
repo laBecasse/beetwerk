@@ -115,7 +115,6 @@ exports.import = function(config, req, res, args)
 		"import",
 		1*args.asis ? "-A" : "",
 		1*args.single ? "-s" : "",
-		"--nocopy",
 		dir
 	];
 	
@@ -143,8 +142,8 @@ exports.ytdl = function(config, req, res, args)
 	if(!dir) return;
 	var url = args.url;
 	
-	res.end(JSON.stringify(pipe.start(dir, 'youtube-dl',
-		["--restrict-filenames", "-x", "-f", "bestaudio/best", args.url], dir)));
+	res.end(JSON.stringify(pipe.start(dir, config.ydl,
+		                          ["--restrict-filenames", "-x","-i", "-f", "bestaudio/best", "-o", "%(playlist_index)s %(creator)s %(title)s.%(ext)s", "--metadata-from-title", "%(artist)s - %(title)s", "--add-metadata", args.url], dir)));
 }
 
 // get all meta tags (that are listed in the config) for the album

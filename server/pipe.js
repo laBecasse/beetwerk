@@ -3,8 +3,16 @@
 var cp = require('child_process');
 
 // buffers[id] = {bin: spawn_obj, last_poll_timestamp: ,
-//		strings: [], is_running: true|false, exit_code: }
+//		strings: [], is_running: true|false, exit_code: , timeouts: []}
 var buffers = {};
+
+function removeBuffer(id) {
+	if (!buffers[id]) return
+	for (let t of buffers[id].timeouts) {
+        	clearTimeout(t)
+	}
+	delete buffers[id]
+}
 
 // Start a command and fill buffer[id]
 exports.start = function(id, command, args /*optional */, working_dir /*optional*/)
@@ -31,7 +39,8 @@ exports.start = function(id, command, args /*optional */, working_dir /*optional
 		last_poll_timestamp: 0,
 		strings: [],
 		is_running: true,
-		exit_code: null
+	        exit_code: null,
+                timeouts: []
 	};
 	
 	// Write new output to the buffer
@@ -63,15 +72,16 @@ exports.start = function(id, command, args /*optional */, working_dir /*optional
 		
 		// delete the buffer after 30 seconds,
 		// if it still exists
-		setTimeout(function()
+		let delBuf = setTimeout(function()
 		{
-			delete buffers[id];
+			deleteBuffers(id);
 		},1000 * 30);
+          buffers[id].timeouts.push(delBuf)
 	});
 	
 	
 	// Kill process and delete buffer after 60 minutes
-	setTimeout(function()
+	let killBuf = setTimeout(function()
 	{
 		if(!buffers[id]) return;
 		buffer_append("[31;01m" // red font
@@ -80,7 +90,7 @@ exports.start = function(id, command, args /*optional */, working_dir /*optional
 		bin.kill();
 		
 	},3600 * 1000);
-	
+	buffers[id].timeouts.push(killBuf)
 	return true;
 }
 
@@ -95,7 +105,7 @@ exports.poll = function(id, version)
 {
 	var buffer = buffers[id];
 	version = version*1;
-	
+  if (!buffer) console.log('buffer has disappeared !! ')
 	if(!buffer || version >= buffer.strings.length || version < 0)
 		return null;
 	
@@ -113,9 +123,9 @@ exports.poll = function(id, version)
 		ret.string += buffer.strings[i];
 		buffer.strings[i] = null; // free up some space
 	}
-	
+
 	// delete the whole thing if the program has quit
-	if(!buffer.is_running) delete buffers[id];
+	if(!buffer.is_running) removeBuffer(id);
 	return ret;
 }
 
@@ -123,6 +133,7 @@ exports.poll = function(id, version)
 exports.send = function(id, string)
 {
 	var buffer = buffers[id];
+
 	if(!buffer || !buffer.is_running || !string)
 		return false;
 	

@@ -9,6 +9,7 @@ exports.tempdir = "/tempdir/on/same/partition/as/music/collection";
 // exports.binary = "/home/beets/.local/bin/beet";
 exports.binary = "beet";
 
+exports.ydl = "youtube-dl";
 
 // Meta tag keys, as in exiftool. The first letter must be
 // uppercase.
